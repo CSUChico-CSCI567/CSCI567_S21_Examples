@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() => runApp(MyApp());
 
@@ -26,19 +27,52 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-  int _counter = 0;
+  Future<SharedPreferences> _prefs = SharedPreferences.getInstance();
+  // int _counter;
+  int _counter = -1;
 
-  void add() {
-    _counter++;
+
+
+  void getCount() async{
+    final SharedPreferences prefs = await _prefs;
+    setState(() {
+      _counter = prefs.getInt('counter') ?? 0;
+    });
+
   }
 
-  void subtract() {
-    _counter--;
+  @override
+  void initState() {
+    super.initState();
+    getCount();
   }
 
-  void _incrementCounter() {
-    setState(add);
+  Future<void> _incrementCounter() async {
+    final SharedPreferences prefs = await _prefs;
+    final int counter = (prefs.getInt('counter') ?? 0) + 1;
+    bool success = await prefs.setInt("counter", counter);
+    if(success){
+      setState(() {
+        _counter = counter;
+      });
+    }
   }
+
+  Future<void> _decrementCounter() async {
+    final SharedPreferences prefs = await _prefs;
+    final int counter = (prefs.getInt('counter') ?? 0) - 1;
+    bool success = await prefs.setInt("counter", counter);
+    if(success){
+      setState(() {
+        _counter = counter;
+      });
+    }
+  }
+
+
+  // void _incrementCounter() {
+  //   setState(add);
+  // }
 
   @override
   Widget build(BuildContext context) {
@@ -50,6 +84,12 @@ class _MyHomePageState extends State<MyHomePage> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: <Widget>[
+            _counter==-1 ? CircularProgressIndicator():Column(
+              children: [
+                Text('Like Count:'),
+                Text('$_counter'),
+              ],
+            ),
             Padding(
                 padding: const EdgeInsets.all(40.0),
                 child: Row(
@@ -57,21 +97,15 @@ class _MyHomePageState extends State<MyHomePage> {
                   children: [
                     ElevatedButton(
                         onPressed:
-                            _counter <= 0 ? null : () => setState(subtract),
+                            _counter <= 0 ? null : _decrementCounter,
                         child: Text("-")),
-                    _counter==0 ? Text("No Counter"):Column(
-                      children: [
-                        Text('Like Count:'),
-                        Text('$_counter'),
-                      ],
-                    ),
-                    ElevatedButton(
-                        onPressed: _counter >= 10 ? null : _incrementCounter,
-                        child: Icon(
-                          Icons.favorite,
-                          color: _counter < 10? Colors.red: Colors.grey
-                        ),
-                        ),
+                    // ElevatedButton(
+                    //     onPressed: _counter >= 10 ? null : _incrementCounter,
+                    //     child: Icon(
+                    //       Icons.favorite,
+                    //       color: _counter < 10? Colors.red: Colors.grey
+                    //     ),
+                    //     ),
                     IconButton(
                       onPressed: _counter >= 10 ? null : _incrementCounter,
                         icon: Icon(
