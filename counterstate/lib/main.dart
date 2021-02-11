@@ -1,5 +1,5 @@
+import 'package:counterstate/storage.dart';
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 void main() => runApp(MyApp());
 
@@ -12,33 +12,30 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         primarySwatch: Colors.purple,
       ),
-      home: MyHomePage(title: 'Flutter Demo'),
+      home: MyHomePage(title: 'Flutter Demo', storage: CounterStorage()),
     );
   }
 }
 
+
 class MyHomePage extends StatefulWidget {
-  const MyHomePage({Key key, this.title}) : super(key: key);
+  const MyHomePage({Key key, this.title, this.storage}) : super(key: key);
 
   final String title;
+  final CounterStorage storage;
 
   @override
   _MyHomePageState createState() => _MyHomePageState();
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-  Future<SharedPreferences> _prefs = SharedPreferences.getInstance();
-  // int _counter;
   int _counter = -1;
 
-
-
   void getCount() async{
-    final SharedPreferences prefs = await _prefs;
+    int counter = await widget.storage.readCounter();
     setState(() {
-      _counter = prefs.getInt('counter') ?? 0;
+      _counter = counter;
     });
-
   }
 
   @override
@@ -47,26 +44,19 @@ class _MyHomePageState extends State<MyHomePage> {
     getCount();
   }
 
+
   Future<void> _incrementCounter() async {
-    final SharedPreferences prefs = await _prefs;
-    final int counter = (prefs.getInt('counter') ?? 0) + 1;
-    bool success = await prefs.setInt("counter", counter);
-    if(success){
-      setState(() {
-        _counter = counter;
-      });
-    }
+    setState(() {
+      _counter++;
+    });
+    widget.storage.writeCounter(_counter);
   }
 
   Future<void> _decrementCounter() async {
-    final SharedPreferences prefs = await _prefs;
-    final int counter = (prefs.getInt('counter') ?? 0) - 1;
-    bool success = await prefs.setInt("counter", counter);
-    if(success){
-      setState(() {
-        _counter = counter;
-      });
-    }
+    setState(() {
+      _counter--;
+    });
+    widget.storage.writeCounter(_counter);
   }
 
 
