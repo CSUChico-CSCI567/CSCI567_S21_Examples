@@ -1,6 +1,9 @@
+import 'dart:ffi';
+
 import 'package:counterstate/storage.dart';
 import 'package:flutter/material.dart';
-import 'package:firebase_core/firebase_core.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:geocoding/geocoding.dart';
 
 void main() {
   // WidgetsFlutterBinding.ensureInitialized();
@@ -33,6 +36,9 @@ class MyHomePage extends StatefulWidget {
 
 class _MyHomePageState extends State<MyHomePage> {
   int _counter = -1;
+  Position position = null;
+  double latitude = 0;
+  double longitude = 0;
 
   void getCount() async{
     int counter = await widget.storage.readCounter();
@@ -41,10 +47,57 @@ class _MyHomePageState extends State<MyHomePage> {
     });
   }
 
+  /// Determine the current position of the device.
+  ///
+  /// When the location services are not enabled or permissions
+  /// are denied the `Future` will return an error.
+  Future<Position> _determinePosition() async {
+    bool serviceEnabled;
+    LocationPermission permission;
+
+    serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) {
+      return Future.error('Location services are disabled.');
+    }
+
+    permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.deniedForever) {
+      return Future.error(
+          'Location permissions are permantly denied, we cannot request permissions.');
+    }
+
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+      if (permission != LocationPermission.whileInUse &&
+          permission != LocationPermission.always) {
+        return Future.error(
+            'Location permissions are denied (actual value: $permission).');
+      }
+    }
+
+    return await Geolocator.getCurrentPosition();
+  }
+
+  void getPlacemarks() async{
+    List<Placemark> placemarks = await placemarkFromCoordinates(latitude, longitude);
+    print(placemarks);
+  }
+
   @override
   void initState() {
     super.initState();
     getCount();
+    _determinePosition()
+        .then((value){
+          setState(() {
+            position = value;
+            latitude = position.latitude;
+            longitude = position.longitude;
+            getPlacemarks();
+          });
+          // print(value);
+        })
+        .catchError((error) => print("$error"));
   }
 
 
@@ -80,6 +133,11 @@ class _MyHomePageState extends State<MyHomePage> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: <Widget>[
+            position == null ? CircularProgressIndicator():Column(
+              children: [
+                Text('$latitude, $longitude'),
+              ],
+            ),
             _counter==-1 ? CircularProgressIndicator():Column(
               children: [
                 Text('Like Count:'),
