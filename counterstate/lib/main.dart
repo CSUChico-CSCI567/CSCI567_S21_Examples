@@ -1,14 +1,17 @@
 import 'dart:ffi';
+import 'dart:io';
 
 import 'package:counterstate/storage.dart';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
+import 'package:image_picker/image_picker.dart';
 
 void main() {
   // WidgetsFlutterBinding.ensureInitialized();
   runApp(MyApp());
 }
+
 class MyApp extends StatelessWidget {
   // This widget is the root of your application.
   @override
@@ -22,7 +25,6 @@ class MyApp extends StatelessWidget {
     );
   }
 }
-
 
 class MyHomePage extends StatefulWidget {
   const MyHomePage({Key key, this.title, this.storage}) : super(key: key);
@@ -39,8 +41,22 @@ class _MyHomePageState extends State<MyHomePage> {
   Position position = null;
   double latitude = 0;
   double longitude = 0;
+  File _image;
+  final picker = ImagePicker();
 
-  void getCount() async{
+  Future getImage() async {
+    final pickedFile = await picker.getImage(source: ImageSource.camera);
+
+    setState(() {
+      if (pickedFile != null) {
+        _image = File(pickedFile.path);
+      } else {
+        print('No image selected.');
+      }
+    });
+  }
+
+  void getCount() async {
     int counter = await widget.storage.readCounter();
     setState(() {
       _counter = counter;
@@ -78,8 +94,9 @@ class _MyHomePageState extends State<MyHomePage> {
     return await Geolocator.getCurrentPosition();
   }
 
-  void getPlacemarks() async{
-    List<Placemark> placemarks = await placemarkFromCoordinates(latitude, longitude);
+  void getPlacemarks() async {
+    List<Placemark> placemarks =
+        await placemarkFromCoordinates(latitude, longitude);
     print(placemarks);
   }
 
@@ -87,19 +104,16 @@ class _MyHomePageState extends State<MyHomePage> {
   void initState() {
     super.initState();
     getCount();
-    _determinePosition()
-        .then((value){
-          setState(() {
-            position = value;
-            latitude = position.latitude;
-            longitude = position.longitude;
-            getPlacemarks();
-          });
-          // print(value);
-        })
-        .catchError((error) => print("$error"));
+    _determinePosition().then((value) {
+      setState(() {
+        position = value;
+        latitude = position.latitude;
+        longitude = position.longitude;
+        getPlacemarks();
+      });
+      // print(value);
+    }).catchError((error) => print("$error"));
   }
-
 
   Future<void> _incrementCounter() async {
     setState(() {
@@ -108,16 +122,12 @@ class _MyHomePageState extends State<MyHomePage> {
     widget.storage.writeCounter(_counter);
   }
 
-  
-
   Future<void> _decrementCounter() async {
     setState(() {
       _counter--;
     });
     widget.storage.writeCounter(_counter);
   }
-  
-
 
   // void _incrementCounter() {
   //   setState(add);
@@ -133,25 +143,32 @@ class _MyHomePageState extends State<MyHomePage> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: <Widget>[
-            position == null ? CircularProgressIndicator():Column(
-              children: [
-                Text('$latitude, $longitude'),
-              ],
-            ),
-            _counter==-1 ? CircularProgressIndicator():Column(
-              children: [
-                Text('Like Count:'),
-                Text('$_counter'),
-              ],
-            ),
+            _image == null
+                ? Text('No image selected.')
+                : SizedBox(
+                    width: 200.0, height: 300.0, child: FittedBox(child:Image.file(_image), fit: BoxFit.fill)),
+            position == null
+                ? CircularProgressIndicator()
+                : Column(
+                    children: [
+                      Text('$latitude, $longitude'),
+                    ],
+                  ),
+            _counter == -1
+                ? CircularProgressIndicator()
+                : Column(
+                    children: [
+                      Text('Like Count:'),
+                      Text('$_counter'),
+                    ],
+                  ),
             Padding(
                 padding: const EdgeInsets.all(40.0),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     ElevatedButton(
-                        onPressed:
-                            _counter <= 0 ? null : _decrementCounter,
+                        onPressed: _counter <= 0 ? null : _decrementCounter,
                         child: Text("-")),
                     // ElevatedButton(
                     //     onPressed: _counter >= 10 ? null : _incrementCounter,
@@ -162,20 +179,18 @@ class _MyHomePageState extends State<MyHomePage> {
                     //     ),
                     IconButton(
                       onPressed: _counter >= 10 ? null : _incrementCounter,
-                        icon: Icon(
-                          Icons.favorite,
-                          color: _counter < 10? Colors.red: Colors.grey
-                        ),
-                      ),
+                      icon: Icon(Icons.favorite,
+                          color: _counter < 10 ? Colors.red : Colors.grey),
+                    ),
                   ],
                 ))
           ],
         ),
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: _counter >= 10 ? null : _incrementCounter,
-        tooltip: 'Increment',
-        child: Icon(Icons.add),
+        onPressed: getImage,
+        tooltip: 'Pick Image',
+        child: Icon(Icons.add_a_photo),
       ),
     );
   }
