@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_storage/firebase_storage.dart' as firebase_storage;
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
@@ -13,14 +14,31 @@ class SecondScreenState extends State<SecondScreen> {
 
   File _image;
   List<String> _labelTexts;
+  bool _initialized = false;
+  FirebaseApp firebaseApp = null;
+
+  // Define an async function to initialize FlutterFire
+  Future<void> initializeFlutterFire() async {
+    try {
+      // Wait for Firebase to initialize and set `_initialized` state to true
+      firebaseApp = await Firebase.initializeApp();
+      _initialized = true;
+    } catch(e) {
+      print(e);
+    }
+  }
 
   @override
   void initState() {
+    initializeFlutterFire();
     _labelTexts=null;
     super.initState();
   }
 
   void _upload() async{
+    if(!_initialized){
+      await initializeFlutterFire();
+    }
     if(_labelTexts != null && _image != null){
       var uuid = Uuid();
 
@@ -32,8 +50,14 @@ class SecondScreenState extends State<SecondScreen> {
   }
 
   Future getImage() async {
-    var image = await ImagePicker.pickImage(source: ImageSource.camera);
-    _image = image;
+    if(!_initialized){
+      await initializeFlutterFire();
+    }
+    final picker = ImagePicker();
+    final pickedFile = await picker.getImage(source: ImageSource.camera);
+    if (pickedFile != null) {
+      _image = File(pickedFile.path);
+    }
     _labelTexts = null;
     setState(() {
 
@@ -45,6 +69,9 @@ class SecondScreenState extends State<SecondScreen> {
   }
 
   Future detectLabels() async {
+    if(!_initialized){
+      await initializeFlutterFire();
+    }
     final FirebaseVisionImage visionImage = FirebaseVisionImage.fromFile(
         _image);
     final ImageLabeler cloudLabeler = FirebaseVision.instance.cloudImageLabeler();
@@ -82,6 +109,9 @@ class SecondScreenState extends State<SecondScreen> {
   }
 
   Future<String> _uploadFile(filename) async {
+    if(!_initialized){
+      await initializeFlutterFire();
+    }
 //    final File file = _image;
     final Reference ref = FirebaseStorage.instance.ref().child('$filename.jpg');
     final metadata = firebase_storage.SettableMetadata(
@@ -98,6 +128,9 @@ class SecondScreenState extends State<SecondScreen> {
   }
 
   Future<void> _addItem(String downloadURL, List<String> labels) async {
+    if(!_initialized){
+      await initializeFlutterFire();
+    }
     await FirebaseFirestore.instance.collection('photos').add(<String, dynamic>{
       'downloadURL': downloadURL,
       'labels': labels,

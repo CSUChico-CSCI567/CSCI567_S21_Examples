@@ -1,3 +1,4 @@
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
@@ -49,9 +50,43 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder(
+      // Initialize FlutterFire
+      future: Firebase.initializeApp(),
+      builder: (context, snapshot) {
+        // Check for errors
+        if (snapshot.hasError) {
+          print(snapshot.error);
+          return Text("Something Went Wrong");
+        }
+
+        // Once complete, show your application
+        if (snapshot.connectionState == ConnectionState.done) {
+          return MyAwesomeApp(title: widget.title);
+        }
+
+        // Otherwise, show something whilst waiting for initialization to complete
+        return CircularProgressIndicator();
+      },
+    );;
+  }
+
+}
+
+class MyAwesomeApp extends StatefulWidget {
+  MyAwesomeApp({Key key, this.title}) : super(key: key);
+
+  final String title;
+
+  @override
+  _MyAwesomeAppState createState() => _MyAwesomeAppState();
+}
+
+class _MyAwesomeAppState extends State<MyAwesomeApp> {
   int _counter = 0;
   FixedExtentScrollController scrollController;
-
 
   @override
   void initState() {
@@ -92,13 +127,13 @@ class _MyHomePageState extends State<MyHomePage> {
         if (!snapshot.hasData) return const Text('Loading Photos...');
 
         if (snapshot.hasData) {
-          print('Snapshot Length ${snapshot.data.documents.length}');
+          print('Snapshot Length ${snapshot.data.docs.length}');
           return Expanded(
             child:
             Scrollbar(
               child: ListView.builder(
                 physics: const AlwaysScrollableScrollPhysics(),
-                itemCount: snapshot.data.documents.length,
+                itemCount: snapshot.data.docs.length,
                 itemBuilder: (context, index) {
                   return photo_widget(snapshot, index);
                 },
@@ -146,4 +181,6 @@ class _MyHomePageState extends State<MyHomePage> {
     );
   }
 }
+
+
 
